@@ -7,7 +7,7 @@
 		"discordID":"{{user 2's discord id}}",
 		"pluralKitID":"{{user 2's pluralKitID}}"
 	},
-  {
+	{
 		"discordID":"{{user n's discord id}}",
 		"pluralKitID":"{{user n's pluralKitID}}"
 	}
