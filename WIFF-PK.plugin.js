@@ -31,7 +31,7 @@
 @else@*/
 
 module.exports = (() => {
-    const config = {"info":{"name":"WIFF-PK","authors":[{"name":"programing-monkey","discord_id":"362337748536786945","github_username":"programing-monkey"}],"version":"0","description":"Shows who is fronting for PluralKit","github":"","github_raw":""},"main":"index.js","defaultConfig":[]};
+    const config = {"info":{"name":"WIFF-PK","authors":[{"name":"programing-monkey","discord_id":"362337748536786945","github_username":"programing-monkey"}],"version":"v1.0.1","description":"Shows who is fronting for PluralKit","github":"","github_raw":""},"main":"index.js","defaultConfig":[]};
 
     return !global.ZeresPluginLibrary ? class {
         constructor() {this._config = config;}
