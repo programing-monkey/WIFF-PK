@@ -1,10 +1,4 @@
 [
-	{
-		"discordID":"{{user 1's discord id goes here}}",
-		"pluralKitID":"{{user 1's pluralKitID goes here}}"
-	},
-	{
-		"discordID":"{{user n's discord id goes here}}",
-		"pluralKitID":"{{user n's pluralKitID goes here}}"
-	}
+	"{{user 1's discord id goes here}}",
+	"{{user n's discord id goes here}}",
 ]
