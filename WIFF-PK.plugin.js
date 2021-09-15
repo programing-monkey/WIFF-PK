@@ -4,8 +4,8 @@
  * @authorLink undefined
  * @donate undefined
  * @patreon undefined
- * @website 
- * @source 
+ * @website https://github.com/programing-monkey/WIFF-PK/
+ * @source https://raw.githubusercontent.com/programing-monkey/WIFF-PK/main/WIFF-PK.plugin.js
  */
 /*@cc_on
 @if (@_jscript)
@@ -28,10 +28,11 @@
         shell.Popup("I'm installed!", 0, "Successfully installed", 0x40);
     }
     WScript.Quit();
+
 @else@*/
 
 module.exports = (() => {
-    const config = {"info":{"name":"WIFF-PK","authors":[{"name":"programing-monkey","discord_id":"362337748536786945","github_username":"programing-monkey"}],"version":"v1.0.1","description":"Shows who is fronting for PluralKit","github":"","github_raw":""},"main":"index.js","defaultConfig":[]};
+    const config = {"info":{"name":"WIFF-PK","authors":[{"name":"programing-monkey","discord_id":"362337748536786945","github_username":"programing-monkey"}],"version":"1.1.0-alpha","description":"Shows who is fronting for PluralKit","github":"https://github.com/programing-monkey/WIFF-PK/","github_raw":"https://raw.githubusercontent.com/programing-monkey/WIFF-PK/main/WIFF-PK.plugin.js"},"changelog":[{"title":"New Stuff","items":["Added changelog"]},{"title":"Improvements","type":"improved","items":["plural kit id is no longer used","the format for the json file has changed"]}],"main":"index.js","defaultConfig":[]};
 
     return !global.ZeresPluginLibrary ? class {
         constructor() {this._config = config;}
@@ -55,159 +56,16 @@ module.exports = (() => {
         stop() {}
     } : (([Plugin, Api]) => {
         const plugin = (Plugin, Library) => {
-    const {Logger, Patcher, DiscordAPI,  Settings} = Library;
+    const {Logger, Patcher, DiscordAPI, Settings} = Library;
+    var xmlHttp = new XMLHttpRequest();
     window.WIFF_PK = {};
-    window.WIFF_PK.SYSTEMS_LIST = [];
-    window.WIFF_PK.SYSTEMS_LIST_JSON = window.BdApi.loadData("WIFF-PK","pluralSystemsData");
     function JSON_request(url){
-        // request object
-        var xmlHttp = new XMLHttpRequest();
-
-        // generates a request for 'url'
         xmlHttp.open( "GET", url, false);
-
-        // sends the get request
-        xmlHttp.send(null);
-
-        // extracts then returns the JSON from the response, also returns the plaintext of the json
-        return [JSON.parse(xmlHttp.response), xmlHttp.response];
-    }
-
-    // Data class for System Members made from some json
-    class Member {
-        constructor(jsonData) {
-            this.PluralKitMemberID = jsonData.id;
-            this.name = jsonData.name;
-            this.color = jsonData.color;
-            this.displayName = jsonData.display_name;
-            this.birthday = jsonData.birthday;
-            this.pronouns = jsonData.pronouns;
-            this.avatar_url = jsonData.avatar_url;
-            this.description = jsonData.description;
-        }
-    }
-
-    // class for Systems
-    class System {
-        constructor(jsonData) {
-            // set some important data
-            this.discordID = jsonData.discordID;
-            this.pluralKitID = jsonData.pluralKitID;
-            this.hasHefaultFronter = jsonData.hasHefaultFronter;
-
-
-            // get the system members through a JSON_request
-            [this.membersJSON, this.membersJSONtext] = JSON_request('https://api.pluralkit.me/v1/s/' + this.pluralKitID + '/members');
-            // makes a list of Member objects with the membersJSON data
-            this.members = this.membersJSON.map(memberjson => new Member(memberjson));
-
-            // get the current system fronters through a JSON_request
-            [this.frontersJSON, this.frontersJSONtext] = JSON_request("https://api.pluralkit.me/v1/s/" + this.pluralKitID + "/fronters");
-            // makes a list of ids of fronting members
-            this.fronters = this.frontersJSON.members.map(frontersjson => frontersjson.id);
-            // ['baldi', 'idada']
-
-
-            this.refresh = {
-                // parent of 'refresh' is the 'System'
-                parent : this,
-                all : function() {
-                },
-                // makes sure that the members are up to date
-                members : function() {
-                    let [new_json, new_json_text] = JSON_request('https://api.pluralkit.me/v1/s/' + this.parent.pluralKitID + '/members');
-                    if(this.parent.membersJSONtext != new_json_text){
-                        this.parent.membersJSONtext = new_json_text;
-                        this.parent.membersJSON = new_json;
-                        this.parent.members = new_json.map(memberjson => new Member(memberjson));
-                        return true;
-                    }
-                    return false;
-                },
-                // makes sure that the fronters are up to date
-                fronters : function() {
-                    [this.parent.frontersJSON, this.parent.frontersJSONtext] = JSON_request("https://api.pluralkit.me/v1/s/" + this.parent.pluralKitID + "/fronters");
-                    this.parent.fronters = this.parent.frontersJSON.members.map(frontersjson => frontersjson.id);
-                },
-                screen : function() {
-                    let parent = this.parent;
-                    let pfp_url = "https://cdn.discordapp.com/avatars/"+parent.discordID+"/"+DiscordAPI.users.find(user => user.id == parent.discordID).discordObject.avatar+".webp?size=128";
-
-                    let frontingMembers = parent.members.filter(member => parent.fronters.find(fronter => fronter == member.PluralKitMemberID));
-                    if (frontingMembers.length == 0){
-                        if(jsonData.hasHefaultFronter == true){
-                            return;
-                        }
-                    }
-                    if (frontingMembers.length == 1){
-                        if(frontingMembers[0].avatar_url != null){
-                            pfp_url = frontingMembers[0].avatar_url;
-                        }else{
-                            frontingMembers[0].avatar_url = pfp_url;
-                        }
-                    }
-                    
-                    let name = frontingMembers.map(frontingMember => frontingMember.displayName).join(" / ");
-                    if (DiscordAPI.currentGuild != null){
-                        var found = false;
-                        for (var i = DiscordAPI.currentGuild.members.length - 1; i >= 0; i--) {
-                            if(DiscordAPI.currentGuild.members[i].discordObject.userId == parent.discordID){
-                                found = true;
-                                if(name.length == 0){
-                                    name = DiscordAPI.currentGuild.members[i].discordObject.nick;
-                                }
-                            }
-                        }
-                        if(!found){
-                            return;
-                        }
-                    }
-
-                    try{
-                        let user_in_member_list_panel = document.querySelector('[class="WIFF_PK_'+parent.discordID+'_MEMBERLIST"]');
-                        if (user_in_member_list_panel == null){
-                            user_in_member_list_panel = document.querySelector('[data-list-id*="members"]').querySelector('[data-user-id="'+parent.discordID+'"]').children[0];
-                            user_in_member_list_panel.classList.add('WIFF_PK_'+parent.discordID+'_MEMBERLIST');
-                        }
-                        user_in_member_list_panel.children[0].querySelector('img[class*="avatar-"]').setAttribute('src', pfp_url);
-                        user_in_member_list_panel.children[1].querySelector('[class*="roleColor-"]').innerHTML = name;
-                    }catch(err){}
-
-
-
-                    try{
-                        let user_in_channel_list_panel = document.querySelector('[class="WIFF_PK_'+parent.discordID+'_VOICECHAT"]');
-                        if (user_in_channel_list_panel == null){
-                            document.querySelector('[id="channels"]').querySelectorAll('[class*="voiceUser"]').forEach(function(vcuser){
-                                let user_to_try = vcuser.querySelector('[style*="'+parent.discordID+'"]');
-                                if (user_to_try != null){
-                                    user_in_channel_list_panel = user_to_try.parentElement;
-                                }
-                            });
-                            user_in_channel_list_panel.classList.add("WIFF_PK_"+parent.discordID+"_VOICECHAT");
-                        }
-                        user_in_channel_list_panel.querySelector('[class*="avatarContainer"]').setAttribute('style', 'background-image: url("'+pfp_url+'");');
-                        user_in_channel_list_panel.querySelector('[class*="usernameFont"]').innerHTML = name;
-                    }catch(err){}
-
-                    
-
-                    try{
-                        let user_popout_imag = document.querySelector('[class="WIFF_PK_'+parent.discordID+'_USER_POPOUT_AVATAR"]');
-                        if (user_popout_imag == null){
-                            user_popout_imag = document.querySelector('div[id*="popout_"] div[data-user-id*="'+parent.discordID+'"] div[class*="avatarWrapperNormal"] img[class*="avatar"]');
-                            user_popout_imag.classList.add("WIFF_PK_"+parent.discordID+"_USER_POPOUT_AVATAR");
-                        }
-                        let user_popout_name = document.querySelector('[class="WIFF_PK_'+parent.discordID+'_USER_POPOUT_NAME"]');
-                        if (user_popout_name == null){
-                            user_popout_name = document.querySelector('div[id*="popout_"] div[data-user-id*="'+parent.discordID+'"] div[class*="headerText"] h3[class*="nickname"]');
-                            user_popout_name.classList.add("WIFF_PK_"+parent.discordID+"_USER_POPOUT_NAME");
-                        }
-                        user_popout_imag.setAttribute('src', pfp_url);
-                        user_popout_name.innerHTML = name;
-                    }catch(err){}
-                }
-            }
+        try{
+            xmlHttp.send(null);
+            return JSON.parse(xmlHttp.response);
+        }catch(e){
+            return null;
         }
     }
 
@@ -215,15 +73,103 @@ module.exports = (() => {
     return class WIFF_PK extends Plugin {
         onStart() {
             Logger.log("Started");
-            for (var i = window.WIFF_PK.SYSTEMS_LIST_JSON.length - 1; i >= 0; i--) {
-                window.WIFF_PK.SYSTEMS_LIST.push(new System(window.WIFF_PK.SYSTEMS_LIST_JSON[i]));
-            }
-
             window.setInterval(function(){
-                for (var i = window.WIFF_PK.SYSTEMS_LIST.length - 1; i >= 0; i--) {
-                    window.WIFF_PK.SYSTEMS_LIST[i].refresh.screen();
-                }
-            },  0.1 * 1000);
+                let ids = window.BdApi.loadData("WIFF-PK", "plural_system_discord_account_ids");
+                if (DiscordAPI.currentGuild != null && ids != undefined){
+                    for (var i = DiscordAPI.currentGuild.members.length -1; i >= 0; i--){
+                        if(ids.includes(DiscordAPI.currentGuild.members[i].userId)){
+                            window.BdApi.saveData("WIFF-PK", "pluralSystemsData", window.WIFF_PK.SYSTEMS_LIST_JSON);
+                            let user_in_member_list_panel = document.querySelector('[class="WIFF_PK_'+DiscordAPI.currentGuild.members[i].userId+'_MEMBERLIST"]');
+                            if (user_in_member_list_panel == null){
+                                try{
+                                    user_in_member_list_panel = document.querySelector('[data-list-id*="members"]').querySelector('[data-user-id="'+DiscordAPI.currentGuild.members[i].userId+'"]').children[0];
+                                }catch(e){}
+                                if (user_in_member_list_panel != null){
+                                    user_in_member_list_panel.classList.add('WIFF_PK_'+DiscordAPI.currentGuild.members[i].userId+'_MEMBERLIST');
+                                }
+                                }
+
+
+                            let user_in_channel_list_panel = document.querySelector('[class="WIFF_PK_'+DiscordAPI.currentGuild.members[i].userId+'_VOICECHAT"]');
+                            if (user_in_channel_list_panel == null){
+                                try{
+                                    document.querySelector('[id="channels"]').querySelectorAll('[class*="voiceUser"]').forEach(function(vcuser){
+                                        let user_to_try = vcuser.querySelector('[style*="'+DiscordAPI.currentGuild.members[i].userId+'"]');
+                                        if (user_to_try != null){
+                                            user_in_channel_list_panel = user_to_try.parentElement;
+                                        }
+                                    });
+                                }catch(e){}
+                                if (user_in_channel_list_panel != null){
+                                    user_in_channel_list_panel.classList.add("WIFF_PK_"+DiscordAPI.currentGuild.members[i].userId+"_VOICECHAT");
+                                }
+                                }
+
+
+                            let user_popout_imag = document.querySelector('[class="WIFF_PK_'+DiscordAPI.currentGuild.members[i].userId+'_USER_POPOUT_AVATAR"]');
+                            if (user_popout_imag == null){
+                                try{
+                                    user_popout_imag = document.querySelector('div[id*="popout_"] div[data-user-id*="'+DiscordAPI.currentGuild.members[i].userId+'"] div[class*="avatarWrapperNormal"] img[class*="avatar"]');
+                                }catch(e){}
+                                if (user_popout_imag != null){
+                                    user_popout_imag.classList.add("WIFF_PK_"+DiscordAPI.currentGuild.members[i].userId+"_USER_POPOUT_AVATAR");
+                                }
+                                }
+
+
+                            let user_popout_name = document.querySelector('[class="WIFF_PK_'+DiscordAPI.currentGuild.members[i].userId+'_USER_POPOUT_NAME"]');
+                            if (user_popout_name == null){
+                                try{
+                                    user_popout_name = document.querySelector('div[id*="popout_"] div[data-user-id*="'+DiscordAPI.currentGuild.members[i].userId+'"] div[class*="headerText"] h3[class*="nickname"]');
+                                }catch(e){}
+                                if (user_popout_name != null){
+                                    user_popout_name.classList.add("WIFF_PK_"+DiscordAPI.currentGuild.members[i].userId+"_USER_POPOUT_NAME");
+                                }
+                                }
+
+
+                            if(DiscordAPI.currentGuild.members[i].user.isBot){
+                                continue;
+                            }
+
+                            let system = JSON_request("https://api.pluralkit.me/v1/a/"+DiscordAPI.currentGuild.members[i].userId);
+
+                            if(system == null){
+                                continue;
+                            }
+
+                            let fronters = JSON_request("https://api.pluralkit.me/v1/s/" + system.id + "/fronters").members;
+                            let pfp_url = system.avatar_url;
+                            if (fronters.length == 1){
+                                if(fronters[0].avatar_url != null){
+                                    pfp_url = fronters[0].avatar_url;
+                                }
+                            }
+
+                            let name = fronters.map(fronter => fronter.name).join(" / ");
+
+
+                            if (user_in_member_list_panel != null){
+                                user_in_member_list_panel.children[0].querySelector('img[class*="avatar-"]').setAttribute('src', pfp_url);
+                                user_in_member_list_panel.children[1].querySelector('[class*="roleColor-"]').innerHTML = name;
+                                }
+                            if (user_in_channel_list_panel != null){
+                                user_in_channel_list_panel.querySelector('[class*="avatarContainer"]').setAttribute('style', 'background-image: url("'+pfp_url+'");');
+                                user_in_channel_list_panel.querySelector('[class*="usernameFont"]').innerHTML = name;
+                                }
+                            if (user_popout_imag != null){
+                                user_popout_imag.setAttribute('src', pfp_url);
+                                }
+                            if (user_popout_name != null){
+                                user_popout_name.innerHTML = name;
+                                }
+
+                            }
+
+                        }                        
+                    }
+                window.dscrd = DiscordAPI;
+            },  3 * 1000);
             
         }
 
@@ -242,14 +188,8 @@ module.exports = (() => {
                 note: "Description of the textbox setting",
                 onChange: function(value) {
                     value.text().then(function(pluralSystemsDatastr){
-                        const pluralSystemsData = JSON.parse(pluralSystemsDatastr);
-                        window.WIFF_PK.SYSTEMS_LIST_JSON = [];
-                        window.WIFF_PK.SYSTEMS_LIST = [];
-                        for (var i = pluralSystemsData.length - 1; i >= 0; i--) {
-                            window.WIFF_PK.SYSTEMS_LIST_JSON.push(pluralSystemsData[i]);
-                            window.WIFF_PK.SYSTEMS_LIST.push(new System(pluralSystemsData[i]));
-                        }
-                        window.BdApi.saveData("WIFF-PK", "pluralSystemsData", window.WIFF_PK.SYSTEMS_LIST_JSON);
+                        window.WIFF_PK.pluralSystemsData = JSON.parse(pluralSystemsDatastr);
+                        window.BdApi.saveData("WIFF-PK", "plural_system_discord_account_ids", window.WIFF_PK.pluralSystemsData);
                     });
                 }
             }));
