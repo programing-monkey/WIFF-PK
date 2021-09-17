@@ -32,7 +32,7 @@
 @else@*/
 
 module.exports = (() => {
-    const config = {"info":{"name":"WIFF-PK","authors":[{"name":"programing-monkey","discord_id":"362337748536786945","github_username":"programing-monkey"}],"version":"1.1.0-alpha","description":"Shows who is fronting for PluralKit","github":"https://github.com/programing-monkey/WIFF-PK/","github_raw":"https://raw.githubusercontent.com/programing-monkey/WIFF-PK/main/WIFF-PK.plugin.js"},"changelog":[{"title":"New Stuff","items":["Added changelog"]},{"title":"Improvements","type":"improved","items":["plural kit id is no longer used","the format for the json file has changed"]}],"main":"index.js","defaultConfig":[]};
+    const config = {"info":{"name":"WIFF-PK","authors":[{"name":"programing-monkey","discord_id":"362337748536786945","github_username":"programing-monkey"}],"version":"1.1.0-alpha1","description":"Shows who is fronting for PluralKit","github":"https://github.com/programing-monkey/WIFF-PK/","github_raw":"https://raw.githubusercontent.com/programing-monkey/WIFF-PK/main/WIFF-PK.plugin.js"},"changelog":[{"title":"New Stuff","items":["Added changelog"]},{"title":"Improvements","type":"improved","items":["plural kit id is no longer used","the format for the json file has changed"]}],"main":"index.js","defaultConfig":[]};
 
     return !global.ZeresPluginLibrary ? class {
         constructor() {this._config = config;}
@@ -73,73 +73,72 @@ module.exports = (() => {
     return class WIFF_PK extends Plugin {
         onStart() {
             Logger.log("Started");
+            window.WIFF_PK.pluralSystemsData = window.BdApi.loadData("WIFF-PK", "plural_system_discord_and_plural_account_ids");
+            window.WIFF_PK.pluralSystemsFronters = {};
             window.setInterval(function(){
-                let ids = window.BdApi.loadData("WIFF-PK", "plural_system_discord_account_ids");
-                if (DiscordAPI.currentGuild != null && ids != undefined){
+                let keys = Object.keys(window.WIFF_PK.pluralSystemsData);
+                for (var i = keys.length - 1; i >= 0; i--) {
+                    window.WIFF_PK.pluralSystemsFronters[keys[i]] = JSON_request("https://api.pluralkit.me/v1/s/" + window.WIFF_PK.pluralSystemsData[keys[i]].id + "/fronters");
+                }
+            },  10 * 1000);
+            window.setInterval(function(){
+                if (DiscordAPI.currentGuild != null && window.WIFF_PK.pluralSystemsData != undefined){
                     for (var i = DiscordAPI.currentGuild.members.length -1; i >= 0; i--){
-                        if(ids.includes(DiscordAPI.currentGuild.members[i].userId)){
-                            window.BdApi.saveData("WIFF-PK", "pluralSystemsData", window.WIFF_PK.SYSTEMS_LIST_JSON);
-                            let user_in_member_list_panel = document.querySelector('[class="WIFF_PK_'+DiscordAPI.currentGuild.members[i].userId+'_MEMBERLIST"]');
+                        if(DiscordAPI.currentGuild.members[i].user.isBot){
+                            continue;
+                        }
+                        let currentID = DiscordAPI.currentGuild.members[i].userId;
+                        if(Object.keys(window.WIFF_PK.pluralSystemsData).includes(currentID)){
+                            let user_in_member_list_panel = document.querySelector('[class="WIFF_PK_'+currentID+'_MEMBERLIST"]');
                             if (user_in_member_list_panel == null){
                                 try{
-                                    user_in_member_list_panel = document.querySelector('[data-list-id*="members"]').querySelector('[data-user-id="'+DiscordAPI.currentGuild.members[i].userId+'"]').children[0];
+                                    user_in_member_list_panel = document.querySelector('[data-list-id*="members"]').querySelector('[data-user-id="'+currentID+'"]').children[0];
                                 }catch(e){}
                                 if (user_in_member_list_panel != null){
-                                    user_in_member_list_panel.classList.add('WIFF_PK_'+DiscordAPI.currentGuild.members[i].userId+'_MEMBERLIST');
+                                    user_in_member_list_panel.classList.add('WIFF_PK_'+currentID+'_MEMBERLIST');
                                 }
                                 }
 
 
-                            let user_in_channel_list_panel = document.querySelector('[class="WIFF_PK_'+DiscordAPI.currentGuild.members[i].userId+'_VOICECHAT"]');
+                            let user_in_channel_list_panel = document.querySelector('[class="WIFF_PK_'+currentID+'_VOICECHAT"]');
                             if (user_in_channel_list_panel == null){
                                 try{
                                     document.querySelector('[id="channels"]').querySelectorAll('[class*="voiceUser"]').forEach(function(vcuser){
-                                        let user_to_try = vcuser.querySelector('[style*="'+DiscordAPI.currentGuild.members[i].userId+'"]');
+                                        let user_to_try = vcuser.querySelector('[style*="'+currentID+'"]');
                                         if (user_to_try != null){
                                             user_in_channel_list_panel = user_to_try.parentElement;
                                         }
                                     });
                                 }catch(e){}
                                 if (user_in_channel_list_panel != null){
-                                    user_in_channel_list_panel.classList.add("WIFF_PK_"+DiscordAPI.currentGuild.members[i].userId+"_VOICECHAT");
+                                    user_in_channel_list_panel.classList.add("WIFF_PK_"+currentID+"_VOICECHAT");
                                 }
                                 }
 
 
-                            let user_popout_imag = document.querySelector('[class="WIFF_PK_'+DiscordAPI.currentGuild.members[i].userId+'_USER_POPOUT_AVATAR"]');
+                            let user_popout_imag = document.querySelector('[class="WIFF_PK_'+currentID+'_USER_POPOUT_AVATAR"]');
                             if (user_popout_imag == null){
                                 try{
-                                    user_popout_imag = document.querySelector('div[id*="popout_"] div[data-user-id*="'+DiscordAPI.currentGuild.members[i].userId+'"] div[class*="avatarWrapperNormal"] img[class*="avatar"]');
+                                    user_popout_imag = document.querySelector('div[id*="popout_"] div[data-user-id*="'+currentID+'"] div[class*="avatarWrapperNormal"] img[class*="avatar"]');
                                 }catch(e){}
                                 if (user_popout_imag != null){
-                                    user_popout_imag.classList.add("WIFF_PK_"+DiscordAPI.currentGuild.members[i].userId+"_USER_POPOUT_AVATAR");
+                                    user_popout_imag.classList.add("WIFF_PK_"+currentID+"_USER_POPOUT_AVATAR");
                                 }
                                 }
 
 
-                            let user_popout_name = document.querySelector('[class="WIFF_PK_'+DiscordAPI.currentGuild.members[i].userId+'_USER_POPOUT_NAME"]');
+                            let user_popout_name = document.querySelector('[class="WIFF_PK_'+currentID+'_USER_POPOUT_NAME"]');
                             if (user_popout_name == null){
                                 try{
-                                    user_popout_name = document.querySelector('div[id*="popout_"] div[data-user-id*="'+DiscordAPI.currentGuild.members[i].userId+'"] div[class*="headerText"] h3[class*="nickname"]');
+                                    user_popout_name = document.querySelector('div[id*="popout_"] div[data-user-id*="'+currentID+'"] div[class*="headerText"] h3[class*="nickname"]');
                                 }catch(e){}
                                 if (user_popout_name != null){
-                                    user_popout_name.classList.add("WIFF_PK_"+DiscordAPI.currentGuild.members[i].userId+"_USER_POPOUT_NAME");
+                                    user_popout_name.classList.add("WIFF_PK_"+currentID+"_USER_POPOUT_NAME");
                                 }
                                 }
 
-
-                            if(DiscordAPI.currentGuild.members[i].user.isBot){
-                                continue;
-                            }
-
-                            let system = JSON_request("https://api.pluralkit.me/v1/a/"+DiscordAPI.currentGuild.members[i].userId);
-
-                            if(system == null){
-                                continue;
-                            }
-
-                            let fronters = JSON_request("https://api.pluralkit.me/v1/s/" + system.id + "/fronters").members;
-                            let pfp_url = system.avatar_url;
+                            let fronters = window.WIFF_PK.pluralSystemsFronters[currentID].members;
+                            let pfp_url = window.WIFF_PK.pluralSystemsData.avatar_url;
                             if (fronters.length == 1){
                                 if(fronters[0].avatar_url != null){
                                     pfp_url = fronters[0].avatar_url;
@@ -166,11 +165,10 @@ module.exports = (() => {
 
                             }
 
-                        }                        
+                        }
                     }
-                window.dscrd = DiscordAPI;
-            },  3 * 1000);
-            
+            },  1 * 1000);
+
         }
 
         onStop() {
@@ -188,8 +186,13 @@ module.exports = (() => {
                 note: "Description of the textbox setting",
                 onChange: function(value) {
                     value.text().then(function(pluralSystemsDatastr){
-                        window.WIFF_PK.pluralSystemsData = JSON.parse(pluralSystemsDatastr);
-                        window.BdApi.saveData("WIFF-PK", "plural_system_discord_account_ids", window.WIFF_PK.pluralSystemsData);
+                        let id_list = JSON.parse(pluralSystemsDatastr);
+                        let pluralSystemsData = {};
+                        for (var i = id_list.length - 1; i >= 0; i--) {
+                            pluralSystemsData[id_list[i]] = JSON_request("https://api.pluralkit.me/v1/a/"+id_list[i]);
+                        }
+                        window.WIFF_PK.pluralSystemsData = pluralSystemsData;
+                        window.BdApi.saveData("WIFF-PK", "plural_system_discord_and_plural_account_ids", pluralSystemsData);
                     });
                 }
             }));
