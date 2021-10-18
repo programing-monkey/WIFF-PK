@@ -32,7 +32,7 @@
 @else@*/
 
 module.exports = (() => {
-    const config = {"info":{"name":"WIFF-PK","authors":[{"name":"programing-monkey","discord_id":"362337748536786945","github_username":"programing-monkey"}],"version":"1.1.0-alpha1","description":"Shows who is fronting for PluralKit","github":"https://github.com/programing-monkey/WIFF-PK/","github_raw":"https://raw.githubusercontent.com/programing-monkey/WIFF-PK/main/WIFF-PK.plugin.js"},"changelog":[{"title":"New Stuff","items":["Added changelog"]},{"title":"Improvements","type":"improved","items":["plural kit id is no longer used","the format for the json file has changed"]}],"main":"index.js","defaultConfig":[]};
+    const config = {"info":{"name":"WIFF-PK","authors":[{"name":"programing-monkey","discord_id":"362337748536786945","github_username":"programing-monkey"}],"version":"1.1.0","description":"Shows who is fronting for PluralKit","github":"https://github.com/programing-monkey/WIFF-PK/","github_raw":"https://raw.githubusercontent.com/programing-monkey/WIFF-PK/main/WIFF-PK.plugin.js"},"changelog":[{"title":"New Stuff","items":["Added changelog"]},{"title":"Improvements","type":"improved","items":["plural kit id is no longer used","the format for the json file has changed","better prefomance"]}],"main":"index.js","defaultConfig":[]};
 
     return !global.ZeresPluginLibrary ? class {
         constructor() {this._config = config;}
@@ -57,17 +57,29 @@ module.exports = (() => {
     } : (([Plugin, Api]) => {
         const plugin = (Plugin, Library) => {
     const {Logger, Patcher, DiscordAPI, Settings} = Library;
-    var xmlHttp = new XMLHttpRequest();
     window.WIFF_PK = {};
-    function JSON_request(url){
-        xmlHttp.open( "GET", url, false);
-        try{
-            xmlHttp.send(null);
-            return JSON.parse(xmlHttp.response);
-        }catch(e){
-            return null;
-        }
+    function loadFile(url, timeout, callback) {
+        var args = Array.prototype.slice.call(arguments, 3);
+        var xhr = new XMLHttpRequest();
+        xhr.ontimeout = function () {
+            console.error("The request for " + url + " timed out.");
+        };
+        xhr.onload = function() {
+            if (xhr.readyState === 4) {
+                if (xhr.status === 200) {
+                    callback.apply(xhr, args);
+                } else {
+                    console.error(xhr.statusText);
+                }
+            }
+        };
+        xhr.open("GET", url, true);
+        xhr.timeout = timeout;
+        xhr.send(null);
     }
+
+
+
 
 
     return class WIFF_PK extends Plugin {
@@ -76,18 +88,21 @@ module.exports = (() => {
             window.WIFF_PK.pluralSystemsData = window.BdApi.loadData("WIFF-PK", "plural_system_discord_and_plural_account_ids");
             window.WIFF_PK.pluralSystemsFronters = {};
             window.setInterval(function(){
-                let keys = Object.keys(window.WIFF_PK.pluralSystemsData);
+                var keys = Object.keys(window.WIFF_PK.pluralSystemsData);
                 for (var i = keys.length - 1; i >= 0; i--) {
-                    window.WIFF_PK.pluralSystemsFronters[keys[i]] = JSON_request("https://api.pluralkit.me/v1/s/" + window.WIFF_PK.pluralSystemsData[keys[i]].id + "/fronters");
+                    loadFile("https://api.pluralkit.me/v1/s/" + window.WIFF_PK.pluralSystemsData[keys[i]].id + "/fronters", 2000, function(i){
+                        window.WIFF_PK.pluralSystemsFronters[keys[i]] = JSON.parse(this.responseText);
+                    },i);
                 }
             },  10 * 1000);
             window.setInterval(function(){
                 if (DiscordAPI.currentGuild != null && window.WIFF_PK.pluralSystemsData != undefined){
                     for (var i = DiscordAPI.currentGuild.members.length -1; i >= 0; i--){
-                        if(DiscordAPI.currentGuild.members[i].user.isBot){
+                        let currentUser = DiscordAPI.currentGuild.members[i];
+                        let currentID = currentUser.userId;
+                        if(currentUser.user.isBot){
                             continue;
                         }
-                        let currentID = DiscordAPI.currentGuild.members[i].userId;
                         if(Object.keys(window.WIFF_PK.pluralSystemsData).includes(currentID)){
                             let user_in_member_list_panel = document.querySelector('[class="WIFF_PK_'+currentID+'_MEMBERLIST"]');
                             if (user_in_member_list_panel == null){
@@ -136,16 +151,15 @@ module.exports = (() => {
                                     user_popout_name.classList.add("WIFF_PK_"+currentID+"_USER_POPOUT_NAME");
                                 }
                                 }
-
+                            Logger.log(currentID);
                             let fronters = window.WIFF_PK.pluralSystemsFronters[currentID].members;
-                            let pfp_url = window.WIFF_PK.pluralSystemsData.avatar_url;
+                            let pfp_url = "https://cdn.discordapp.com/avatars/"+currentID+"/"+currentUser.user.avatar+".webp";
                             if (fronters.length == 1){
                                 if(fronters[0].avatar_url != null){
                                     pfp_url = fronters[0].avatar_url;
                                 }
                             }
-
-                            let name = fronters.map(fronter => fronter.name).join(" / ");
+                            let name = fronters.map(fronter => fronter.name).join(" / ") || currentUser.nickname || currentUser.name || "Error";
 
 
                             if (user_in_member_list_panel != null){
@@ -183,16 +197,17 @@ module.exports = (() => {
                 type: "file",
                 id: "jsondat",
                 name: "json data",
-                note: "Description of the textbox setting",
+                note: "json file",
                 onChange: function(value) {
                     value.text().then(function(pluralSystemsDatastr){
                         let id_list = JSON.parse(pluralSystemsDatastr);
-                        let pluralSystemsData = {};
+                        window.WIFF_PK.pluralSystemsData = {};
                         for (var i = id_list.length - 1; i >= 0; i--) {
-                            pluralSystemsData[id_list[i]] = JSON_request("https://api.pluralkit.me/v1/a/"+id_list[i]);
+                            loadFile("https://api.pluralkit.me/v1/a/" + id_list[i], 2000, function(i){
+                                window.WIFF_PK.pluralSystemsData[id_list[i]] = JSON.parse(this.responseText);
+                            },i);
                         }
-                        window.WIFF_PK.pluralSystemsData = pluralSystemsData;
-                        window.BdApi.saveData("WIFF-PK", "plural_system_discord_and_plural_account_ids", pluralSystemsData);
+                        window.BdApi.saveData("WIFF-PK", "plural_system_discord_and_plural_account_ids", window.WIFF_PK.pluralSystemsData);
                     });
                 }
             }));
