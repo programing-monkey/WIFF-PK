@@ -1,7 +1,7 @@
 # WIFF-PK
 ## what does it do?
 
-this plugin makes **client side** a improvment to [plural kit](https://pluralkit.me/), it changes the pfp and name of plural system accounts to that of whoever is fronting in the following places:
+this plugin makes a ***client side*** improvment to [plural kit](https://pluralkit.me/), it changes the pfp and name of plural system accounts to that of whoever is fronting, in the following places:
 - voice channels
   ##### without WIFF-PK
   ![image](https://user-images.githubusercontent.com/36543893/137802615-256cd896-cf04-47b3-b27a-421650e7214c.png)
