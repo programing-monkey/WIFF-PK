@@ -1,3 +1,10 @@
+# Update: 2023-11-16
+This Plugin does longer works, and is not being maintained (hasn't been for a while).
+
+A different, but slightly similar plugin which I would reccomend checking out is [Pluralchum](https://github.com/estroBiologist/pluralchum)
+
+
+
 # WIFF-PK
 ## what does it do?
 
